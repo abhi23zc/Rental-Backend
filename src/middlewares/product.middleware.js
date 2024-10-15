@@ -6,16 +6,51 @@ import { User } from "../schema/user.Schema.js";
 import { Request } from "../schema/request.Schema.js";
 import { Notification } from "../schema/notification.Schema.js";
 
-export const getProducts = async (req, res, next) => {
+
+
+// export const getProducts = async (req, res, next) => {
+//   try {
+//     const products = await Product.find({});
+//     return res.status(200).json({
+//       status: true,
+//       message: "Products Fetched Succesfully",
+//       data: products,
+//     });
+//   } catch (error) { }
+// };
+
+export const getProducts = async (req, res) => {
   try {
-    const products = await Product.find({});
+    const { latitude, longitude } = req.query;
+
+
+    const radius = 30
+    let filter = {};
+
+    if (latitude && longitude) {
+      filter.location = {
+        $geoWithin: {
+          $centerSphere: [
+            [parseFloat(longitude), parseFloat(latitude)],
+            parseFloat(radius) / 6378.1
+          ],
+        },
+      };
+    }
+
+    const products = await Product.find(filter);
+
     return res.status(200).json({
       status: true,
       message: "Products Fetched Succesfully",
       data: products,
     });
-  } catch (error) { }
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return res.status(500).json({ status: false, message: "Server Error Occurred" });
+  }
 };
+
 
 export const getProduct = async (req, res, next) => {
   try {
@@ -43,10 +78,11 @@ export const getProduct = async (req, res, next) => {
   }
 };
 
+
 export const addProduct = async (req, res) => {
+  console.log("product adding")
   try {
 
-    
     const validateBody = productSchema.safeParse({
       ...req.body,
       owner: req?.user?.userId,
@@ -58,6 +94,7 @@ export const addProduct = async (req, res) => {
         .json({ success: false, errors: validateBody.error.errors });
     }
 
+
     if (!req.files || !req.files.images) {
       return res
         .status(400)
@@ -68,20 +105,24 @@ export const addProduct = async (req, res) => {
       ? req.files.images
       : [req.files.images];
     const timestamp = Math.round(new Date().getTime() / 1000);
+
     const uploadPromises = files.map((file) =>
       cloudinary.uploader.upload(file.tempFilePath, {
         folder: "renter-images",
         timestamp: timestamp,
       })
     );
-
     const results = await Promise.all(uploadPromises);
+
 
     files.forEach((file) => {
       fs.unlink(file.tempFilePath, (err) => {
         if (err) console.error("Failed to delete temp file:", err);
       });
     });
+
+
+    const { latitude, longitude } = req.body;
 
     const product = new Product({
       ...req.body,
@@ -90,7 +131,13 @@ export const addProduct = async (req, res) => {
         url: result.secure_url,
         public_id: result.public_id,
       })),
+
+      location: {
+        type: 'Point',
+        coordinates: [parseFloat(longitude), parseFloat(latitude)],
+      },
     });
+
 
     await product.save();
 
@@ -106,6 +153,7 @@ export const addProduct = async (req, res) => {
       .json({ success: false, message: "Server Error Occurred" });
   }
 };
+
 
 export const editProduct = async (req, res, next) => {
   const productId = req.params.id;
