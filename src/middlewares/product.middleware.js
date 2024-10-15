@@ -22,29 +22,39 @@ import { Notification } from "../schema/notification.Schema.js";
 export const getProducts = async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
-
-
-    const radius = 30
-    let filter = {};
-
     if (latitude && longitude) {
-      filter.location = {
-        $geoWithin: {
-          $centerSphere: [
-            [parseFloat(longitude), parseFloat(latitude)],
-            parseFloat(radius) / 6378.1
-          ],
-        },
-      };
+      const radius = 30
+      let filter = {};
+
+      if (latitude && longitude) {
+        filter.location = {
+          $geoWithin: {
+            $centerSphere: [
+              [parseFloat(longitude), parseFloat(latitude)],
+              parseFloat(radius) / 6378.1
+            ],
+          },
+        };
+      }
+
+      const products = await Product.find(filter);
+
+      return res.status(200).json({
+        status: true,
+        message: "Products Fetched Succesfully",
+        data: products,
+      });
+    }
+    else {
+      const products = await Product.find({});
+      return res.status(200).json({
+        status: true,
+        message: "Products Fetched Succesfully",
+        data: products,
+      });
     }
 
-    const products = await Product.find(filter);
 
-    return res.status(200).json({
-      status: true,
-      message: "Products Fetched Succesfully",
-      data: products,
-    });
   } catch (error) {
     console.error("Error fetching products:", error);
     return res.status(500).json({ status: false, message: "Server Error Occurred" });
