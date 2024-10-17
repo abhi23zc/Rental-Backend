@@ -25,7 +25,8 @@ app.use(fileUpload({
 
 app.use(cors({
 
-  origin: [process.env.CLIENT_HOST, 'https://renter-sigma.vercel.app/', "http://localhost:3000"],
+  origin: [process.env.CLIENT_HOST, "https://renter-sigma.vercel.app", "http://localhost:3000"],
+  
   credentials: true,
 }));
 
