@@ -134,7 +134,11 @@ export const getNotification = async (req, res, next) => {
 export const getProducts = async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
+    if (latitude == "null" && longitude == "null") {
 
+      const products = await Product.find({});
+      return res.status(200).json({ status: true, message: "Products Fetched Successfully", data: products });
+    }
 
     const cacheKey = latitude && longitude ? `products:${latitude},${longitude}` : `products:all`;
 
@@ -247,6 +251,7 @@ export const addProduct = async (req, res) => {
     });
 
     const { latitude, longitude } = req.body;
+
 
     const product = new Product({
       ...req.body,
