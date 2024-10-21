@@ -447,23 +447,42 @@ export const getlikedProducts = async (req, res, next) => {
     return res.status(500).json({ status: false, error: 'Server error' });
   }
 
-  return res.status(200).json({ status: true })
+
 }
 
 export const likeProduct = async (req, res, next) => {
   try {
     const id = req.params.id;
     const fetchProduct = await Product.findById(id);
-    
+
     if (fetchProduct.likedBy.includes(req.user.userId)) {
       const product = await Product.findByIdAndUpdate(id, { $pull: { likedBy: req.user.userId } }, { new: true });
+      redis.flushdb((err, result) => {
+        if (err) {
+          console.error("Error flushing the current Redis database:", err);
+        } else {
+          console.log("Current Redis database deleted:", result);
+        }
+      });
       return res.status(200).json({ status: true, message: "Product disliked Successfully", data: product });
+
+
+
     }
 
     const product = await Product.findByIdAndUpdate(id, { $addToSet: { likedBy: req.user.userId } }, { new: true });
     if (!product) {
       return res.status(400).json({ status: false, message: "Product Not Found" });
     }
+
+    redis.flushdb((err, result) => {
+      if (err) {
+        console.error("Error flushing the current Redis database:", err);
+      } else {
+        console.log("Current Redis database deleted:", result);
+      }
+    });
+
 
     return res.status(200).json({ status: true, message: "Product Liked Successfully", data: product });
   } catch (error) {
