@@ -15,7 +15,6 @@ const productSchema = new mongoose.Schema({
         type: { type: String, default: 'Point' }, 
         coordinates: {
             type: [Number], 
-            required: true,
         },
     },
 

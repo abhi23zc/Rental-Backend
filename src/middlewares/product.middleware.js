@@ -6,7 +6,7 @@ import { User } from "../schema/user.Schema.js";
 import { Request } from "../schema/request.Schema.js";
 import { Notification } from "../schema/notification.Schema.js";
 import redis from "../config/redisClient.js";
-
+// MONGODB_URI = mongodb+srv://zrf:abhi123@cluster0.mhsmca1.mongodb.net/renter
 
 // export const getProducts = async (req, res, next) => {
 //   try {
@@ -134,13 +134,14 @@ export const getNotification = async (req, res, next) => {
 export const getProducts = async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
+    const cacheKey = latitude != "null" && longitude !== "null" ? `products:${latitude},${longitude}` : `products:all`;
     if (latitude == "null" && longitude == "null") {
 
       const products = await Product.find({});
+      await redis.set(cacheKey, JSON.stringify(products), 'EX', 36000);
       return res.status(200).json({ status: true, message: "Products Fetched Successfully", data: products });
     }
 
-    const cacheKey = latitude && longitude ? `products:${latitude},${longitude}` : `products:all`;
 
 
     const cachedData = await redis.get(cacheKey);
@@ -431,3 +432,42 @@ export const searchProducts = async (req, res, next) => {
   }
 };
 
+
+export const getlikedProducts = async (req, res, next) => {
+
+  try {
+    const likedProducts = await Product.find({ likedBy: req.user.userId });
+    return res.status(200).json({
+      status: true,
+      message: "Liked Products Fetched Successfully",
+      data: likedProducts,
+    });
+  } catch (error) {
+    console.error('Error fetching liked products:', error);
+    return res.status(500).json({ status: false, error: 'Server error' });
+  }
+
+  return res.status(200).json({ status: true })
+}
+
+export const likeProduct = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const fetchProduct = await Product.findById(id);
+    
+    if (fetchProduct.likedBy.includes(req.user.userId)) {
+      const product = await Product.findByIdAndUpdate(id, { $pull: { likedBy: req.user.userId } }, { new: true });
+      return res.status(200).json({ status: true, message: "Product disliked Successfully", data: product });
+    }
+
+    const product = await Product.findByIdAndUpdate(id, { $addToSet: { likedBy: req.user.userId } }, { new: true });
+    if (!product) {
+      return res.status(400).json({ status: false, message: "Product Not Found" });
+    }
+
+    return res.status(200).json({ status: true, message: "Product Liked Successfully", data: product });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ status: false, message: "Server Error Occurred" });
+  }
+}

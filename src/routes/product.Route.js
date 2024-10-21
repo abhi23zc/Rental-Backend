@@ -11,7 +11,9 @@ import {
     getOwnerRequest,
     getClientRequest,
     acceptRequest,
-    getNotification
+    getNotification,
+    likeProduct,
+    getlikedProducts
     ,
 } from "../middlewares/product.middleware.js";
 import { isAuthenticated } from "../middlewares/authenticate.js";
@@ -22,6 +24,12 @@ const router = Router();
 router.get("/find", searchProducts);
 
 router.get("/", getProducts);
+
+router.post("/like/:id", isAuthenticated, likeProduct);
+// router.post("/dislike/:id", isAuthenticated, dislikeProduct);
+router.get("/liked", isAuthenticated, getlikedProducts);
+
+
 router.get("/:id", getProduct);
 router.put("/:id", isAuthenticated, editProduct);
 router.delete("/:id", isAuthenticated, deleteProduct);
